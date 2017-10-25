@@ -3560,32 +3560,34 @@ void displayScrollingLetter(char c, int R, int G, int B) {
         }
       }
       //plotPointsFromMatrix((float*)&pointsArray,pointCounter,R,G,B);
-      float currentFrame[pointCounter][4], previousFrame[pointCounter][4];
-      for (int transformObjects = 0 ; transformObjects < scrollingTextTransformObjects; transformObjects++) {
+      float currentFrame[scrollingTextTransformObjects][pointCounter][4], previousFrame[scrollingTextTransformObjects][pointCounter][4];
+      
         
-        for (int steps = 0; steps < scrollingTextTransformSteps; steps++) {
-          if (steps == 0) {
-            Matrix.Multiply((float*)pointsArray, (float*)scrollingTextTransform[transformObjects][steps], pointCounter, 4, 4, (float*)currentFrame);
-            Matrix.Copy((float*)currentFrame, pointCounter, 4, (float*)previousFrame);   
-          } else {
-            Matrix.Copy((float*)currentFrame, pointCounter, 4, (float*)previousFrame);
-            Matrix.Multiply((float*)pointsArray, (float*)scrollingTextTransform[transformObjects][steps], pointCounter, 4, 4, (float*)currentFrame);
+      for (int steps = 0; steps < scrollingTextTransformSteps; steps++) {
+        for (int transformObjects = 0 ; transformObjects < scrollingTextTransformObjects; transformObjects++) {
+        if (steps == 0) {
+          Matrix.Multiply((float*)pointsArray, (float*)scrollingTextTransform[transformObjects][steps], pointCounter, 4, 4, (float*)currentFrame[transformObjects]);
+          Matrix.Copy((float*)currentFrame[transformObjects], pointCounter, 4, (float*)previousFrame[transformObjects]);   
+        } else {
+          Matrix.Copy((float*)currentFrame[transformObjects], pointCounter, 4, (float*)previousFrame[transformObjects]);
+          Matrix.Multiply((float*)pointsArray, (float*)scrollingTextTransform[transformObjects][steps], pointCounter, 4, 4, (float*)currentFrame[transformObjects]);
+        }
+        //Matrix.Print((float*)&currentFrame[transformObjects], pointCounter, 4, "Current Frame");
+        //Matrix.Print((float*)&previousFrame[transformObjects], pointCounter, 4, "Previous Frame");
+        for (int pointNo = 0; pointNo < pointCounter; pointNo++) {
+          if (previousFrame[transformObjects][pointNo][0] >= 0 && previousFrame[transformObjects][pointNo][0] < 8 && previousFrame[transformObjects][pointNo][1] >= 0 && previousFrame[transformObjects][pointNo][1] < 8 && previousFrame[transformObjects][pointNo][2] >= 0 && previousFrame[transformObjects][pointNo][2] < 8) {
+            LED((int)previousFrame[transformObjects][pointNo][0],(int)previousFrame[transformObjects][pointNo][1],(int)previousFrame[transformObjects][pointNo][2],0,0,0);
           }
-          //Matrix.Print((float*)&currentFrame, pointCounter, 4, "Current Frame");
-          //Matrix.Print((float*)&previousFrame, pointCounter, 4, "Previous Frame");
-          for (int pointNo = 0; pointNo < pointCounter; pointNo++) {
-            if (previousFrame[pointNo][0] >= 0 && previousFrame[pointNo][0] < 8 && previousFrame[pointNo][1] >= 0 && previousFrame[pointNo][1] < 8 && previousFrame[pointNo][2] >= 0 && previousFrame[pointNo][2] < 8) {
-              LED((int)previousFrame[pointNo][0],(int)previousFrame[pointNo][1],(int)previousFrame[pointNo][2],0,0,0);
-            }
-          }
-          for (int pointNo = 0; pointNo < pointCounter; pointNo++) {
-            if (currentFrame[pointNo][0] >= 0 && currentFrame[pointNo][0] < 8 && currentFrame[pointNo][1] >= 0 && currentFrame[pointNo][1] < 8 && currentFrame[pointNo][2] >= 0 && currentFrame[pointNo][2] < 8) {
-              LED((int)currentFrame[pointNo][0],(int)currentFrame[pointNo][1],(int)currentFrame[pointNo][2],R,G,B);
-            }
+        }
+        for (int pointNo = 0; pointNo < pointCounter; pointNo++) {
+          if (currentFrame[transformObjects][pointNo][0] >= 0 && currentFrame[transformObjects][pointNo][0] < 8 && currentFrame[transformObjects][pointNo][1] >= 0 && currentFrame[transformObjects][pointNo][1] < 8 && currentFrame[transformObjects][pointNo][2] >= 0 && currentFrame[transformObjects][pointNo][2] < 8) {
+            LED((int)currentFrame[transformObjects][pointNo][0],(int)currentFrame[transformObjects][pointNo][1],(int)currentFrame[transformObjects][pointNo][2],R,G,B);
           }
         }
         
       }
+      delay(150);
+    }
 
       
 
