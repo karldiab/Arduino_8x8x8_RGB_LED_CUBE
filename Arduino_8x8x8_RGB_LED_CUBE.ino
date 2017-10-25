@@ -1521,7 +1521,7 @@ void loop(){//***start loop***start loop***start loop***start loop***start loop*
 //harlem_shake();
 //displaySolidText("KARL",500,9,15,15);
 //displayScrollingLetter('K',15,15,15);
-displayScrollingText("KILL",15,15,15);
+displayScrollingText("I WANT TO KILL EVERYBODY IN THE WORLD I WANT TO EAT YOUR HEART",15,15,15);
 
 
 
