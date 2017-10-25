@@ -1,6 +1,7 @@
 
 
 
+
 /*
 The 8x8x8 RGB LED Cube
 
@@ -3483,7 +3484,7 @@ void displaySolidLetter(char c,int R, int G, int B) {
   }
   }
 
-void displayScrollingLetter(char c, int R, int G, int B) { 
+void displayMatrixScrollingLetter(char c, int R, int G, int B) { 
   Serial.println("Printing this letter:");
   Serial.println(c);
   char letter[8];
@@ -3499,7 +3500,7 @@ void displayScrollingLetter(char c, int R, int G, int B) {
           }
       }
     }
-    float pointsArray[pointCounter][3];
+    float pointsArray[pointCounter][4];
     pointCounter = 0;
     for (int level = 0; level < 8; level++) {
         int row = 0;
@@ -3507,17 +3508,18 @@ void displayScrollingLetter(char c, int R, int G, int B) {
             if (letter[level] & mask) {
                 pointsArray[pointCounter][0] = (float) level;
                 pointsArray[pointCounter][1] = (float) row; 
-                pointsArray[pointCounter++][2] = (float) 0;
+                pointsArray[pointCounter][2] = (float) 0;
+                pointsArray[pointCounter++][3] = (float) 1;
             }
             row++;
         }
       }
       Serial.println("pointCounter :");
       Serial.println(pointCounter);
-      Matrix.Print((float*)&pointsArray, pointCounter, 3, "A Letter");
+      Matrix.Print((float*)&pointsArray, pointCounter, 4, "A Letter");
 
  }
-void OLDdisplayScrollingLetter(char c, int R, int G, int B) {
+void OdisplayScrollingLetter(char c, int R, int G, int B) {
   //LED(int level, int row, int column, byte red, byte green, byte blue)
   char display[8], beforePanel[8];// = font_data[c];
   int j = 7;
