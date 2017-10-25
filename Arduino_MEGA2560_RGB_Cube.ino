@@ -14,6 +14,9 @@ Also porting over to Arduino MEGA2560
 www.TheLEDCube.com
 SuperTech@TheLEDCube.com
 
+New effects added by Karl Diab
+https://github.com/karldiab/Arduino_8x8x8_RGB_LED_CUBE
+
 Latest
 *** Ver 12 RevA 8/8/2014
 
