@@ -81,8 +81,8 @@ int BAM_Bit, BAM_Counter=0; // Bit Angle Modulation variables to keep track of t
 //These variables can be used for other things
 unsigned long start;//for a millis timer to cycle through the animations
 int scrollingTextTransformSteps = 14;
-int scrollingTextTransformObjects = 3;
-float scrollingTextTransform[3][14][4][4] = 
+int scrollingTextTransformObjects = 4;
+int scrollingTextTransform[4][14][4][4] = 
       {
         {
           {{1,0,0,0},{0,1,0,0},{0,0,1,0},{0,6,0,1}},
@@ -115,6 +115,22 @@ float scrollingTextTransform[3][14][4][4] =
           {{1,0,0,0},{0,0,-1,0},{0,1,0,0},{0,0,12,1}},
           {{1,0,0,0},{0,0,-1,0},{0,1,0,0},{0,0,13,1}},
           {{1,0,0,0},{0,0,-1,0},{0,1,0,0},{0,0,14,1}}
+        },
+        {
+          {{1,0,0,0},{0,0,1,0},{0,-1,0,0},{0,7,6,1}},
+          {{1,0,0,0},{0,0,1,0},{0,-1,0,0},{0,7,5,1}},
+          {{1,0,0,0},{0,0,1,0},{0,-1,0,0},{0,7,4,1}},
+          {{1,0,0,0},{0,0,1,0},{0,-1,0,0},{0,7,3,1}},
+          {{1,0,0,0},{0,0,1,0},{0,-1,0,0},{0,7,2,1}},
+          {{1,0,0,0},{0,0,1,0},{0,-1,0,0},{0,7,1,1}},
+          {{1,0,0,0},{0,0,1,0},{0,-1,0,0},{0,7,0,1}},
+          {{1,0,0,0},{0,0,1,0},{0,-1,0,0},{0,7,-1,1}},
+          {{1,0,0,0},{0,0,1,0},{0,-1,0,0},{0,7,-2,1}},
+          {{1,0,0,0},{0,0,1,0},{0,-1,0,0},{0,7,-3,1}},
+          {{1,0,0,0},{0,0,1,0},{0,-1,0,0},{0,7,-4,1}},
+          {{1,0,0,0},{0,0,1,0},{0,-1,0,0},{0,7,-5,1}},
+          {{1,0,0,0},{0,0,1,0},{0,-1,0,0},{0,7,-6,1}},
+          {{1,0,0,0},{0,0,1,0},{0,-1,0,0},{0,7,-7,1}}
         },
         {
           {{1,0,0,0},{0,0,1,0},{0,-1,0,0},{0,7,6,1}},
@@ -3488,6 +3504,35 @@ LED(num4-1, i,7,0,0,15);
 
 }//harlem SHake
 
+void CopyIntMatrix(int* A, int n, int m, int* B)
+{
+  int i, j, k;
+  for (i = 0; i < m; i++)
+    for(j = 0; j < n; j++)
+    {
+      B[n * i + j] = A[n * i + j];
+    }
+}
+
+void MultiplyIntMatrix(int* A, int* B, int m, int p, int n, int* C)
+{
+  // A = input matrix (m x p)
+  // B = input matrix (p x n)
+  // m = number of rows in A
+  // p = number of columns in A = number of rows in B
+  // n = number of columns in B
+  // C = output matrix = A*B (m x n)
+  int i, j, k;
+  for (i = 0; i < m; i++)
+    for(j = 0; j < n; j++)
+    {
+      C[n * i + j] = 0;
+      for (k = 0; k < p; k++)
+        C[n * i + j] = C[n * i + j] + A[p * i + k] * B[n * k + j];
+    }
+}
+
+
 void clean(){
   int ii, jj, kk;
     for(ii=0; ii<8; ii++)
@@ -3540,7 +3585,7 @@ void displaySolidLetter(char c,int R, int G, int B) {
   }
   }
   //not working yet
-void plotPointsFromMatrix(float* points,int pointCount, int R,int G, int B) {
+void plotPointsFromMatrix(int* points,int pointCount, int R,int G, int B) {
   clean();
   Matrix.Print((float*)&points, pointCount, 4, "A Letter");
   for (int pointNo = 0; pointNo < (sizeof(points)/sizeof(float)); pointNo++) {
@@ -3561,35 +3606,35 @@ void displayScrollingLetter(char c, int R, int G, int B) {
           }
       }
     }
-    float pointsArray[pointCounter][4];
+    int pointsArray[pointCounter][4];
     pointCounter = 0;
     for (int level = 0; level < 8; level++) {
         int row = 0;
         for (unsigned int mask = 0x80; mask != 0; mask >>= 1) {
             if (letter[level] & mask) {
-                pointsArray[pointCounter][0] = (float) level;
-                pointsArray[pointCounter][1] = (float) row; 
-                pointsArray[pointCounter][2] = (float) 0;
-                pointsArray[pointCounter++][3] = (float) 1;
+                pointsArray[pointCounter][0] = level;
+                pointsArray[pointCounter][1] = row; 
+                pointsArray[pointCounter][2] = 0;
+                pointsArray[pointCounter++][3] = 1;
             }
             row++;
         }
       }
-      //plotPointsFromMatrix((float*)&pointsArray,pointCounter,R,G,B);
-      float currentFrame[scrollingTextTransformObjects][pointCounter][4], previousFrame[scrollingTextTransformObjects][pointCounter][4];
+      //plotPointsFromMatrix((int*)&pointsArray,pointCounter,R,G,B);
+      int currentFrame[scrollingTextTransformObjects][pointCounter][4], previousFrame[scrollingTextTransformObjects][pointCounter][4];
       
         
       for (int steps = 0; steps < scrollingTextTransformSteps; steps++) {
         for (int transformObjects = 0 ; transformObjects < scrollingTextTransformObjects; transformObjects++) {
         if (steps == 0) {
-          Matrix.Multiply((float*)pointsArray, (float*)scrollingTextTransform[transformObjects][steps], pointCounter, 4, 4, (float*)currentFrame[transformObjects]);
-          Matrix.Copy((float*)currentFrame[transformObjects], pointCounter, 4, (float*)previousFrame[transformObjects]);   
+          MultiplyIntMatrix((int*)pointsArray, (int*)scrollingTextTransform[transformObjects][steps], pointCounter, 4, 4, (int*)currentFrame[transformObjects]);
+          CopyIntMatrix((int*)currentFrame[transformObjects], pointCounter, 4, (int*)previousFrame[transformObjects]);   
         } else {
-          Matrix.Copy((float*)currentFrame[transformObjects], pointCounter, 4, (float*)previousFrame[transformObjects]);
-          Matrix.Multiply((float*)pointsArray, (float*)scrollingTextTransform[transformObjects][steps], pointCounter, 4, 4, (float*)currentFrame[transformObjects]);
+          CopyIntMatrix((int*)currentFrame[transformObjects], pointCounter, 4, (int*)previousFrame[transformObjects]);
+          MultiplyIntMatrix((int*)pointsArray, (int*)scrollingTextTransform[transformObjects][steps], pointCounter, 4, 4, (int*)currentFrame[transformObjects]);
         }
-        //Matrix.Print((float*)&currentFrame[transformObjects], pointCounter, 4, "Current Frame");
-        //Matrix.Print((float*)&previousFrame[transformObjects], pointCounter, 4, "Previous Frame");
+        //Matrix.Print((int*)&currentFrame[transformObjects], pointCounter, 4, "Current Frame");
+        //Matrix.Print((int*)&previousFrame[transformObjects], pointCounter, 4, "Previous Frame");
         for (int pointNo = 0; pointNo < pointCounter; pointNo++) {
           if (previousFrame[transformObjects][pointNo][0] >= 0 && previousFrame[transformObjects][pointNo][0] < 8 && previousFrame[transformObjects][pointNo][1] >= 0 && previousFrame[transformObjects][pointNo][1] < 8 && previousFrame[transformObjects][pointNo][2] >= 0 && previousFrame[transformObjects][pointNo][2] < 8) {
             LED((int)previousFrame[transformObjects][pointNo][0],(int)previousFrame[transformObjects][pointNo][1],(int)previousFrame[transformObjects][pointNo][2],0,0,0);
