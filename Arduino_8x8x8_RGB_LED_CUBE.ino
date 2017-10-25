@@ -3519,7 +3519,7 @@ void displayMatrixScrollingLetter(char c, int R, int G, int B) {
       Matrix.Print((float*)&pointsArray, pointCounter, 4, "A Letter");
 
  }
-void OdisplayScrollingLetter(char c, int R, int G, int B) {
+void displayScrollingLetter(char c, int R, int G, int B) {
   //LED(int level, int row, int column, byte red, byte green, byte blue)
   char display[8], beforePanel[8];// = font_data[c];
   int j = 7;
