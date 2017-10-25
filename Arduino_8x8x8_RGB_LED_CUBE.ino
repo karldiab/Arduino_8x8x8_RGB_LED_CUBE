@@ -80,6 +80,46 @@ int BAM_Bit, BAM_Counter=0; // Bit Angle Modulation variables to keep track of t
 
 //These variables can be used for other things
 unsigned long start;//for a millis timer to cycle through the animations
+int scrollingTextTransformSteps = 14;
+int scrollingTextTransformObjects = 2;
+float scrollingTextTransform[2][14][4][4] = 
+      {
+        {
+          {{1,0,0,0},{0,1,0,0},{0,0,1,0},{0,6,0,1}},
+          {{1,0,0,0},{0,1,0,0},{0,0,1,0},{0,5,0,1}},
+          {{1,0,0,0},{0,1,0,0},{0,0,1,0},{0,4,0,1}},
+          {{1,0,0,0},{0,1,0,0},{0,0,1,0},{0,3,0,1}},
+          {{1,0,0,0},{0,1,0,0},{0,0,1,0},{0,2,0,1}},
+          {{1,0,0,0},{0,1,0,0},{0,0,1,0},{0,1,0,1}},
+          {{1,0,0,0},{0,1,0,0},{0,0,1,0},{0,0,0,1}},
+          {{1,0,0,0},{0,1,0,0},{0,0,1,0},{0,-1,0,1}},
+          {{1,0,0,0},{0,1,0,0},{0,0,1,0},{0,-2,0,1}},
+          {{1,0,0,0},{0,1,0,0},{0,0,1,0},{0,-3,0,1}},
+          {{1,0,0,0},{0,1,0,0},{0,0,1,0},{0,-4,0,1}},
+          {{1,0,0,0},{0,1,0,0},{0,0,1,0},{0,-5,0,1}},
+          {{1,0,0,0},{0,1,0,0},{0,0,1,0},{0,-6,0,1}},
+          {{1,0,0,0},{0,1,0,0},{0,0,1,0},{0,-7,0,1}}
+        },
+        {
+          {1,0,0,0},{0,0,-1,0},{0,1,0,0},{0,0,1,1}},
+          {1,0,0,0},{0,0,-1,0},{0,1,0,0},{0,0,2,1}},
+          {1,0,0,0},{0,0,-1,0},{0,1,0,0},{0,0,3,1}},
+          {1,0,0,0},{0,0,-1,0},{0,1,0,0},{0,0,4,1}},
+          {1,0,0,0},{0,0,-1,0},{0,1,0,0},{0,0,5,1}},
+          {1,0,0,0},{0,0,-1,0},{0,1,0,0},{0,0,6,1}},
+          {1,0,0,0},{0,0,-1,0},{0,1,0,0},{0,0,7,1}},
+          {1,0,0,0},{0,0,-1,0},{0,1,0,0},{0,0,8,1}},
+          {1,0,0,0},{0,0,-1,0},{0,1,0,0},{0,0,9,1}},
+          {1,0,0,0},{0,0,-1,0},{0,1,0,0},{0,0,10,1}},
+          {1,0,0,0},{0,0,-1,0},{0,1,0,0},{0,0,11,1}},
+          {1,0,0,0},{0,0,-1,0},{0,1,0,0},{0,0,12,1}},
+          {1,0,0,0},{0,0,-1,0},{0,1,0,0},{0,0,13,1}},
+          {1,0,0,0},{0,0,-1,0},{0,1,0,0},{0,0,14,1}}
+        }
+      };
+    
+  
+
 
 char font_data[128][8] = {
 { 0x00,  0x00,  0x00,  0x00,  0x00,  0x00,  0x00,  0x00 },    // 0 :
@@ -3483,10 +3523,15 @@ void displaySolidLetter(char c,int R, int G, int B) {
     }
   }
   }
-
-void displayMatrixScrollingLetter(char c, int R, int G, int B) { 
-  Serial.println("Printing this letter:");
-  Serial.println(c);
+  //not working yet
+void plotPointsFromMatrix(float* points,int pointCount, int R,int G, int B) {
+  clean();
+  Matrix.Print((float*)&points, pointCount, 4, "A Letter");
+  for (int pointNo = 0; pointNo < (sizeof(points)/sizeof(float)); pointNo++) {
+    //LED((int)points[pointNo][0],(int)points[pointNo][1],(int)points[pointNo][2],R,G,B);
+  }
+}
+void displayScrollingLetter(char c, int R, int G, int B) { 
   char letter[8];
   int j = 7;
   for (int i = 0; i < 8; i++) {
@@ -3514,12 +3559,38 @@ void displayMatrixScrollingLetter(char c, int R, int G, int B) {
             row++;
         }
       }
-      Serial.println("pointCounter :");
-      Serial.println(pointCounter);
-      Matrix.Print((float*)&pointsArray, pointCounter, 4, "A Letter");
+      //plotPointsFromMatrix((float*)&pointsArray,pointCounter,R,G,B);
+      float currentFrame[pointCounter][4], previousFrame[pointCounter][4];
+      for (int transformObjects = 0 ; transformObjects < scrollingTextTransformObjects; transformObjects++) {
+        
+        for (int steps = 0; steps < scrollingTextTransformSteps; steps++) {
+          if (steps == 0) {
+            Matrix.Multiply((float*)pointsArray, (float*)scrollingTextTransform[transformObjects][steps], pointCounter, 4, 4, (float*)currentFrame);
+            Matrix.Copy((float*)currentFrame, pointCounter, 4, (float*)previousFrame);   
+          } else {
+            Matrix.Copy((float*)currentFrame, pointCounter, 4, (float*)previousFrame);
+            Matrix.Multiply((float*)pointsArray, (float*)scrollingTextTransform[transformObjects][steps], pointCounter, 4, 4, (float*)currentFrame);
+          }
+          //Matrix.Print((float*)&currentFrame, pointCounter, 4, "Current Frame");
+          //Matrix.Print((float*)&previousFrame, pointCounter, 4, "Previous Frame");
+          for (int pointNo = 0; pointNo < pointCounter; pointNo++) {
+            if (previousFrame[pointNo][0] >= 0 && previousFrame[pointNo][0] < 8 && previousFrame[pointNo][1] >= 0 && previousFrame[pointNo][1] < 8 && previousFrame[pointNo][2] >= 0 && previousFrame[pointNo][2] < 8) {
+              LED((int)previousFrame[pointNo][0],(int)previousFrame[pointNo][1],(int)previousFrame[pointNo][2],0,0,0);
+            }
+          }
+          for (int pointNo = 0; pointNo < pointCounter; pointNo++) {
+            if (currentFrame[pointNo][0] >= 0 && currentFrame[pointNo][0] < 8 && currentFrame[pointNo][1] >= 0 && currentFrame[pointNo][1] < 8 && currentFrame[pointNo][2] >= 0 && currentFrame[pointNo][2] < 8) {
+              LED((int)currentFrame[pointNo][0],(int)currentFrame[pointNo][1],(int)currentFrame[pointNo][2],R,G,B);
+            }
+          }
+        }
+        delay(150);
+      }
+
+      
 
  }
-void displayScrollingLetter(char c, int R, int G, int B) {
+void OLDdisplayScrollingLetter(char c, int R, int G, int B) {
   //LED(int level, int row, int column, byte red, byte green, byte blue)
   char display[8], beforePanel[8];// = font_data[c];
   int j = 7;
