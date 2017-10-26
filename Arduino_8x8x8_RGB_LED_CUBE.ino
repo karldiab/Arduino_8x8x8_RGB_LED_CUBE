@@ -81,6 +81,7 @@ int BAM_Bit, BAM_Counter=0; // Bit Angle Modulation variables to keep track of t
 //These variables can be used for other things
 unsigned long start;//for a millis timer to cycle through the animations
 int scrollingTextTransformSteps = 14;
+int scrollingTestStepsTillCleared = 8;
 int scrollingTextTransformObjects = 4;
 int scrollingTextTransform[4][14][4][4] = 
       {
@@ -3551,8 +3552,120 @@ void displaySolidText(String s, int delayms,int R, int G, int B) {
 }
 
 void displayScrollingText(String s,int R, int G, int B) {
-  for (char c : s) {
-    displayScrollingLetter(c,R,G,B);
+//  int scrollingTextTransformSteps = 14;
+//  int scrollingTestStepsTillCleared = 8;
+//  int scrollingTextTransformObjects = 4;
+//int scrollingTextTransform[4][14][4][4]
+  int stringLen = 1;//s.length();
+  int * characterPointMatrixes[stringLen];
+  int characterPointCount[stringLen];
+
+  char letter[8];
+  int j = 7;
+  for (int i = 0; i < 8; i++) {
+    letter[i] = font_data[s[0]][j--];
+  }
+  int pointCounter = 0;
+  for (int level = 0; level < 8; level++) {
+      for (unsigned int mask = 0x80; mask != 0; mask >>= 1) {
+          if (letter[level] & mask) {
+            pointCounter++;
+          }
+      }
+    }
+    int pointsArray[pointCounter][4];
+    pointCounter = 0;
+    for (int level = 0; level < 8; level++) {
+        int row = 0;
+        for (unsigned int mask = 0x80; mask != 0; mask >>= 1) {
+            if (letter[level] & mask) {
+                pointsArray[pointCounter][0] = level;
+                pointsArray[pointCounter][1] = row; 
+                pointsArray[pointCounter][2] = 0;
+                pointsArray[pointCounter++][3] = 1;
+            }
+            row++;
+        }
+      }
+      Matrix.Print((float*)&pointsArray, pointCounter, 4, "Curregfdgfdgnt Letter");
+  //Holds a char's points in the below loop, all chars will have <= 64 points, so 65 big shouldn't overflow
+  /*int pointsArray[65][4]; 
+  for (int i = 0; i < stringLen; i++) {
+    char letter[8];
+    int j = 7;
+    for (int i = 0; i < 8; i++) {
+      letter[i] = font_data[s[i]][j--];
+    }
+    int pointCounter = 0;
+    for (int level = 0; level < 8; level++) {
+        for (unsigned int mask = 0x80; mask != 0; mask >>= 1) {
+            if (letter[level] & mask) {
+              pointCounter++;
+            }
+        }
+    }
+    Serial.println("Letter : Pointcounter: ");
+    Serial.println(s[i]);
+    Serial.println(pointCounter);
+    pointCounter = 0;
+    
+    for (int level = 0; level < 8; level++) {
+        int row = 0;
+        for (unsigned int mask = 0x80; mask != 0; mask >>= 1) {
+            if (letter[level] & mask) {
+                pointsArray[pointCounter][0] = level;
+                pointsArray[pointCounter][1] = row; 
+                pointsArray[pointCounter][2] = 0;
+                pointsArray[pointCounter++][3] = 1;
+            }
+            row++;
+        }
+      }
+    Matrix.Print((float*)&pointsArray, pointCounter, 4, "Current Letter");
+    characterPointCount[i] = pointCounter;
+    characterPointMatrixes[i] = (int*)pointsArray;
+    Serial.println("Letter : Pointcounter: ");
+    Serial.println(s[i]);
+    Serial.println(pointCounter);
+    Matrix.Print((float*)&pointsArray, pointCounter, 4, "Current Letter");
+  }*/
+  //4 sides to the cube
+  //panelAnimationStep keeps track of which step of the scrolling animation each side of the cube is on
+  //currentlyDisplayingCharacter keeps track of which character is being displayed on each side of the cube
+  int panelAnimationStep[4], currentlyDisplayingCharacter[4];
+  for (int i = 0; i < 4; i++) {
+    panelAnimationStep[i] = scrollingTextTransformSteps;
+    currentlyDisplayingCharacter[i] = 0;
+  }
+  //how many letters have been displayed on the cube
+  int lettersDisplayed = 0;
+  //while there are still characters to display and the last character hasn't scrolled off the last panel
+  while (currentlyDisplayingCharacter[3] < stringLen - 1 || panelAnimationStep[3] < scrollingTextTransformSteps) {
+    //if there are still letters to display and the first side of the cube is ready to display another character, display it
+    if (lettersDisplayed < stringLen && panelAnimationStep[0] == scrollingTextTransformSteps) {
+      currentlyDisplayingCharacter[0] = lettersDisplayed++;
+      panelAnimationStep[0] = 0;
+    }
+    //for each side of the cube
+    for (int sideOfCube = 0; sideOfCube < 4; sideOfCube++) {
+      //if the scrolling animation for that side hasn't yet finished
+      if (panelAnimationStep[sideOfCube] < scrollingTextTransformSteps) {
+        //if it's not the first animation step, clear the pervious step
+        if (panelAnimationStep[sideOfCube] > 0) {
+          transformAndDisplayObject((int*)characterPointMatrixes[currentlyDisplayingCharacter[sideOfCube]],characterPointCount[currentlyDisplayingCharacter[sideOfCube]],(int*)scrollingTextTransform[sideOfCube][panelAnimationStep[sideOfCube]-1], 0, 0, 0);
+        }
+        //display transformed object, increment the steps
+        transformAndDisplayObject((int*)characterPointMatrixes[currentlyDisplayingCharacter[sideOfCube]],characterPointCount[currentlyDisplayingCharacter[sideOfCube]],(int*)scrollingTextTransform[sideOfCube][panelAnimationStep[sideOfCube]], R, G, B);
+        panelAnimationStep[sideOfCube]++;
+        //if the animation has reached the end of the side, and it's not the last side
+        if (panelAnimationStep[sideOfCube] == scrollingTestStepsTillCleared && sideOfCube != 3) {
+          //start the scrolling animation on the next side of the cube
+          currentlyDisplayingCharacter[sideOfCube + 1] = currentlyDisplayingCharacter[sideOfCube];
+          panelAnimationStep[sideOfCube + 1] = 0;
+        }
+      }
+    }
+    delay(1000);
   }
 }
 
@@ -3584,15 +3697,17 @@ void displaySolidLetter(char c,int R, int G, int B) {
     }
   }
   }
-  //not working yet
-void plotPointsFromMatrix(int* points,int pointCount, int R,int G, int B) {
-  clean();
-  Matrix.Print((float*)&points, pointCount, 4, "A Letter");
-  for (int pointNo = 0; pointNo < (sizeof(points)/sizeof(float)); pointNo++) {
-    //LED((int)points[pointNo][0],(int)points[pointNo][1],(int)points[pointNo][2],R,G,B);
-  }
-}
-void displayScrollingLetter(char c, int R, int G, int B) { 
+void transformAndDisplayObject(int* pointsArray, int pointCounter, int* transformMatrix, int R, int G, int B) { 
+      int transformedObject[pointCounter][4];
+      MultiplyIntMatrix((int*)pointsArray, (int*)transformMatrix, pointCounter, 4, 4, (int*)transformedObject);
+      for (int pointNo = 0; pointNo < pointCounter; pointNo++) {
+        //if point is out of bounds, don't display it
+        if (transformedObject[pointNo][0] >= 0 && transformedObject[pointNo][0] < 8 && transformedObject[pointNo][1] >= 0 && transformedObject[pointNo][1] < 8 && transformedObject[pointNo][2] >= 0 && transformedObject[pointNo][2] < 8) {
+          LED(transformedObject[pointNo][0],transformedObject[pointNo][1],transformedObject[pointNo][2],R,G,B);
+        }
+      }
+ }
+void TESTOLDdisplayScrollingLetter(char c, int R, int G, int B) { 
   char letter[8];
   int j = 7;
   for (int i = 0; i < 8; i++) {
@@ -3620,10 +3735,7 @@ void displayScrollingLetter(char c, int R, int G, int B) {
             row++;
         }
       }
-      //plotPointsFromMatrix((int*)&pointsArray,pointCounter,R,G,B);
       int currentFrame[scrollingTextTransformObjects][pointCounter][4], previousFrame[scrollingTextTransformObjects][pointCounter][4];
-      
-        
       for (int steps = 0; steps < scrollingTextTransformSteps; steps++) {
         for (int transformObjects = 0 ; transformObjects < scrollingTextTransformObjects; transformObjects++) {
         if (steps == 0) {
