@@ -36,6 +36,33 @@ Not a professional LED cube builder, this is how I did it, and this is my cube
 #include <SPI.h>// SPI Library used to clock data out to the shift registers
 #include <string.h>
 #include <MatrixMath.h>
+#include <math.h>
+static const float PI_F = 3.14159265f;
+
+// === helper prototypes (must match the helper functions you paste later) ===
+static inline void hsv4(uint8_t h, uint8_t s, uint8_t v, byte &R, byte &G, byte &B);
+static inline void vox(int z,int x,int y, byte r,byte g,byte b);
+static inline void clearCube();
+
+// === animation prototypes (matching the definitions at the bottom) ===
+void helixDance(uint16_t ms=8000);
+void pulseSphere(uint16_t ms=7000);
+void orbitals(uint16_t ms=6000);
+void spiralTunnel(uint16_t ms=8000);
+void rainDiagonal(uint16_t ms=7000);
+void planeWipeRotate(uint16_t ms=6000);
+
+// New trippy ones
+void hypnoHelix(uint16_t ms=9000);
+void breathingDonut(uint16_t ms=8500);
+void plasmaCube(uint16_t ms=6000);
+void waveCurtains(uint16_t ms=7000);
+void spiralBloom(uint16_t ms=6500);
+void lissajousRopes(uint16_t ms=7000);
+// helpers I provided also need prototypes if you placed them later:
+static inline void hsv4(uint8_t h, uint8_t s, uint8_t v, byte &R, byte &G, byte &B);
+static inline void vox(int z,int x,int y, byte r,byte g,byte b);
+static inline void clearCube();
 
 
 #define latch_pin 4// Defines actual BIT of PortD for latch - is Arduino UNO pin 2, MEGA pin 4
@@ -147,9 +174,14 @@ void loop(){//***start loop***start loop***start loop***start loop***start loop*
 // LED(level you want 0-7, row you want 0-7, column you want 0-7, red brighness 0-15, green brighness 0-15, blue brighness 0-15);
 
 
-
+  helixDance(8000);
+  pulseSphere(7000);
+  //orbitals(6000);
+  spiralTunnel(8000);
+  //rainDiagonal(7000);
+  planeWipeRotate(6000);
 fireworks (20,15,0);
-displayScrollingText("KILL",15,15,15);
+ displayScrollingText("KILL",15,15,15);
 rainVersionTwo();
 folder();
 sinwaveTwo();
@@ -386,6 +418,229 @@ void test() {
 //    }}}
 //    delay(5000);
 }
+
+// --- Helpers (drop once) ---
+#include <math.h>
+
+// Simple HSV→RGB for 4-bit (0–15) output. h=0–255, s/v=0–15
+static inline void hsv4(uint8_t h, uint8_t s, uint8_t v, byte &R, byte &G, byte &B){
+  if(s==0){ R=G=B=v; return; }
+  uint8_t region = h / 43;              // 6 regions
+  uint8_t rem = (h - region*43) * 6;    // 0..258
+  uint16_t p = (v*(15 - s))/15;
+  uint16_t q = (v*(15 - ((s*rem)/258)))/15;
+  uint16_t t = (v*(15 - ((s*(258-rem))/258)))/15;
+
+  switch(region){
+    case 0: R=v; G=t; B=p; break;
+    case 1: R=q; G=v; B=p; break;
+    case 2: R=p; G=v; B=t; break;
+    case 3: R=p; G=q; B=v; break;
+    case 4: R=t; G=p; B=v; break;
+    default:R=v; G=p; B=q; break;
+  }
+}
+
+// Bounds-safe voxel set (clamps indices)
+static inline void vox(int z,int x,int y, byte r,byte g,byte b){
+  if(z<0||z>7||x<0||x>7||y<0||y>7) return;
+  LED(z,x,y,r,g,b);
+}
+
+// Clear whole cube fast
+static inline void clearCube(){ clean(); }
+
+void helixDance(uint16_t ms=8000){
+  uint32_t t0 = millis();
+  clearCube();
+  while(millis()-t0 < ms){
+    clearCube();
+    float a = (millis()-t0) * 0.004f; // angular speed
+    for(int z=0; z<8; z++){
+      float ang = a + z*0.6f;
+      float cx = 3.5f + 2.8f*cosf(ang);
+      float cy = 3.5f + 2.8f*sinf(ang);
+      uint8_t hue = (uint8_t)((ang*40)+128);
+      byte R,G,B; hsv4(hue, 15, 12, R,G,B);
+      vox(z, (int)roundf(cx), (int)roundf(cy), R,G,B);
+
+      // second helix 180° out of phase
+      float ang2 = ang + (float)M_PI;
+      float cx2 = 3.5f + 2.8f*cosf(ang2);
+      float cy2 = 3.5f + 2.8f*sinf(ang2);
+      hsv4(hue+128, 15, 12, R,G,B);
+      vox(z, (int)roundf(cx2), (int)roundf(cy2), R,G,B);
+    }
+    delay(40);
+  }
+}
+
+void pulseSphere(uint16_t ms=7000){
+  uint32_t t0 = millis();
+  while(millis()-t0 < ms){
+    float phase = (millis()-t0)*0.003f;
+    float r = 1.5f + 2.5f*(0.5f + 0.5f*sinf(phase)); // 1.5..4.0
+    clearCube();
+    for(int z=0; z<8; z++){
+      for(int x=0; x<8; x++){
+        for(int y=0; y<8; y++){
+          float dz=z-3.5f, dx=x-3.5f, dy=y-3.5f;
+          float d=fabsf(sqrtf(dx*dx+dy*dy+dz*dz)-r);
+          if(d<0.65f){ // surface thickness
+            uint8_t hue = (uint8_t)(r*48 + y*10);
+            byte R,G,B; hsv4(hue, 12, 13, R,G,B);
+            LED(z,x,y,R,G,B);
+          }
+        }
+      }
+    }
+    delay(35);
+  }
+}
+
+void orbitals(uint16_t ms=6000){
+  uint32_t t0=millis();
+  while(millis()-t0 < ms){
+    clearCube();
+    float a = (millis()-t0)*0.005f;
+    // XY plane, z = 3/4
+    for(int k=3;k<=4;k++){
+      float cx=3.5f+3.0f*cosf(a);
+      float cy=3.5f+3.0f*sinf(a);
+      byte R,G,B; hsv4((uint8_t)(a*60),15,12,R,G,B);
+      vox(k,(int)roundf(cx),(int)roundf(cy),R,G,B);
+    }
+    // XZ plane, y fixed = 2/5
+    for(int k=2;k<=5;k++){
+      float cx=3.5f+3.0f*cosf(a*1.3f+1.0f);
+      float cz=3.5f+3.0f*sinf(a*1.3f+1.0f);
+      byte R,G,B; hsv4((uint8_t)(a*60+85),14,12,R,G,B);
+      vox((int)roundf(cz),(int)roundf(cx),k,R,G,B);
+    }
+    // YZ plane, x fixed = 1/6
+    for(int k=1;k<=6;k++){
+      float cy=3.5f+3.0f*cosf(a*0.8f+2.0f);
+      float cz=3.5f+3.0f*sinf(a*0.8f+2.0f);
+      byte R,G,B; hsv4((uint8_t)(a*60+170),12,12,R,G,B);
+      vox((int)roundf(cz),k,(int)roundf(cy),R,G,B);
+    }
+    delay(30);
+  }
+}
+
+void spiralTunnel(uint16_t ms=8000){
+  uint32_t t0=millis();
+  while(millis()-t0 < ms){
+    clearCube();
+    float a=(millis()-t0)*0.006f;
+    for(int z=0; z<8; z++){
+      float r=0.8f + 0.6f*z;                 // radius grows with z
+      float ang=a + z*0.7f;                  // twist
+      for(int i=0;i<4;i++){                  // 4 spokes
+        float th = ang + i*(float)M_PI_2;
+        int x = (int)roundf(3.5f + r*cosf(th));
+        int y = (int)roundf(3.5f + r*sinf(th));
+        uint8_t hue=(uint8_t)(z*22 + i*40 + a*50);
+        byte R,G,B; hsv4(hue, 15, 12, R,G,B);
+        vox(z,x,y,R,G,B);
+      }
+    }
+    delay(35);
+  }
+}
+
+void rainDiagonal(uint16_t ms=7000){
+  struct Drop{ int z,x,y; int dz,dx,dy; byte v; uint8_t hue; };
+  const int N=10;
+  Drop d[N];
+  auto reset=[&](int i){
+    d[i].z=7; d[i].x=random(8); d[i].y=random(8);
+    d[i].dz=-1; d[i].dx=-1; d[i].dy=-1; // diagonal-ish
+    d[i].v=15; d[i].hue=random(256);
+  };
+  for(int i=0;i<N;i++) reset(i);
+
+  uint32_t t0=millis();
+  while(millis()-t0<ms){
+    // faint global fade by clearing and redrawing only tail samples
+    clearCube();
+    for(int i=0;i<N;i++){
+      // draw tail segments
+      int tx=d[i].x, ty=d[i].y, tz=d[i].z;
+      byte v=d[i].v;
+      for(int seg=0; seg<4; seg++){
+        if(v==0) break;
+        byte R,G,B; hsv4(d[i].hue, 15, v, R,G,B);
+        vox(tz,tx,ty,R,G,B);
+        tx-=d[i].dx; ty-=d[i].dy; tz-=d[i].dz; // opposite to leave a trail behind
+        v = (v>3)? v-4 : 0;
+      }
+      // advance head
+      d[i].x += d[i].dx; d[i].y += d[i].dy; d[i].z += d[i].dz;
+      d[i].hue += 3;
+      if(d[i].x<0||d[i].y<0||d[i].z<0) reset(i);
+    }
+    delay(40);
+  }
+}
+
+void planeWipeRotate(uint16_t ms=6000){
+  uint32_t t0 = millis();
+  while (millis() - t0 < ms){
+    clearCube();
+
+    // base angle (slightly slower for smoothness)
+    float a = (millis() - t0) * 0.0035f;
+
+    // We'll render TWO nearby planes for motion blur
+    const int planes = 2;
+    float ang[planes] = { a, a - 0.18f };  // second plane lags a bit
+    float nx[planes], ny[planes], nz[planes];
+
+    for (int k=0;k<planes;k++){
+      float ak = ang[k];
+      float x = cosf(ak);
+      float y = sinf(ak*0.9f);
+      float z = sinf(ak*1.3f);
+      float L = sqrtf(x*x + y*y + z*z) + 1e-3f;
+      nx[k] = x / L; ny[k] = y / L; nz[k] = z / L;
+    }
+
+    // half-thickness of the band (bigger = smoother)
+    const float w = 1.10f;   // try 0.9..1.4 to taste
+    for (int z=0; z<8; z++){
+      for (int x=0; x<8; x++){
+        for (int y=0; y<8; y++){
+          float px = x - 3.5f, py = y - 3.5f, pz = z - 3.5f;
+
+          // brightness = max falloff of the two planes
+          float v = 0.0f;
+          for (int k=0;k<planes;k++){
+            float d = nx[k]*px + ny[k]*py + nz[k]*pz;        // signed distance to plane
+            float vk = (w - fabsf(d)) / w;                   // linear falloff
+            if (vk > v) v = vk;                              // keep brightest contribution
+          }
+
+          if (v > 0.0f){
+            // map v (0..1) to 4-bit brightness 1..12 (avoid 0 to reduce blink)
+            int bri = 1 + (int)(v * 11.0f);
+            if (bri > 12) bri = 12;
+
+            uint8_t hue = (uint8_t)(z*20 + x*10 + a*60);     // colorful & trippy
+            byte R,G,B; hsv4(hue, 14, bri, R,G,B);
+            LED(z,x,y,R,G,B);
+          }
+        }
+      }
+    }
+    delay(28); // a tad faster helps smoothness too (try 24–32)
+  }
+  clean();
+}
+
+
+
+
 
 //*****Fireworks*****Fireworks*****Fireworks*****Fireworks*****Fireworks*****Fireworks*****Fireworks*****Fireworks*****Fireworks*****Fireworks***
 
